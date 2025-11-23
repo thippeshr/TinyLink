@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TinyLink Dashboard</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      padding: 20px; 
+      background: linear-gradient(to right, #fbc2eb, #a6c1ee); /* gradient background */
+      color: #333;
+    }
+    h2 { color: #1e3a8a; }
+    h3 { color: #2563eb; margin-top: 30px; }
+    input { 
+      padding: 10px; 
+      margin: 5px 0; 
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 300px;
+    }
+    button { 
+      padding: 10px 15px; 
+      margin-top: 10px;
+      border-radius: 6px;
+      border: none;
+      background-color: #3b82f6; 
+      color: white; 
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.3s;
+    }
+    button:hover { 
+      background-color: #1e40af; 
+    }
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 20px; 
+      background-color: white;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    th, td { 
+      padding: 12px; 
+      text-align: left; 
+    }
+    th { 
+      background-color: #3b82f6; 
+      color: white; 
+    }
+    tr:nth-child(even) {
+      background-color: #f0f9ff;
+    }
+    a { 
+      color: #1d4ed8; 
+      text-decoration: none; 
+      font-weight: bold;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    button.delete-btn {
+      background-color: #ef4444;
+    }
+    button.delete-btn:hover {
+      background-color: #b91c1c;
+    }
+  </style>
+</head>
+<body>
+  <h2>TinyLink Dashboard</h2>
+
+  <h3>Create Short Link</h3>
+  <label>Original URL:</label><br>
+  <input type="text" id="url" placeholder="https://example.com"><br>
+  <label>Custom Code (6-8 letters/numbers):</label><br>
+  <input type="text" id="code" placeholder="GOOGLE1"><br>
+  <button onclick="createLink()">Create Short Link</button>
+
+  <h3>Links</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Code</th>
+        <th>URL</th>
+        <th>Clicks</th>
+        <th>Last Clicked</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="links-table">
+      <!-- links will appear here -->
+    </tbody>
+  </table>
+
+  <script>
+    const backend = "http://localhost:5000";
+
+    async function fetchLinks() {
+      const res = await fetch(`${backend}/api/links`);
+      const data = await res.json();
+      const tbody = document.getElementById("links-table");
+      tbody.innerHTML = "";
+
+      data.forEach(link => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><a href="${backend}/${link.code}" target="_blank">${link.code}</a></td>
+          <td>${link.url}</td>
+          <td>${link.clicks}</td>
+          <td>${link.last_clicked || "-"}</td>
+          <td><button class="delete-btn" onclick="deleteLink('${link.code}')">Delete</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function createLink() {
+      const url = document.getElementById("url").value;
+      const code = document.getElementById("code").value;
+
+      try {
+        const res = await fetch(`${backend}/api/links`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, code })
+        });
+
+        const data = await res.json();
+        if (res.status === 200 || res.status === 201) {
+          alert("Link created!");
+          document.getElementById("url").value = "";
+          document.getElementById("code").value = "";
+          fetchLinks();
+        } else {
+          alert(data.error || "Error creating link");
+        }
+      } catch {
+        alert("Server error");
+      }
+    }
+
+    async function deleteLink(code) {
+      if (!confirm("Are you sure you want to delete this link?")) return;
+      try {
+        await fetch(`${backend}/api/links/${code}`, { method: "DELETE" });
+        fetchLinks();
+      } catch {
+        alert("Server error");
+      }
+    }
+
+    fetchLinks();
+  </script>
+</body>
+</html>
